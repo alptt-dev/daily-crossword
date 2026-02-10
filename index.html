@@ -1,40 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Daily Crossword</title>
-  <style>
-    body { font-family: Arial; text-align: center; }
-    .grid { display: inline-grid; gap: 2px; margin-top: 20px; }
-    .cell {
-      width: 40px;
-      height: 40px;
-      text-align: center;
-      font-size: 20px;
-      text-transform: uppercase;
-    }
-    .black { background: black; }
-  </style>
+<meta charset="UTF-8">
+<title>Ellii Daily Crossword</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: #f4f6f9;
+}
+
+h1 { font-size: 32px; }
+
+.grid {
+  display: inline-grid;
+  gap: 2px;
+  margin: 20px;
+}
+
+.cell {
+  width: 45px;
+  height: 45px;
+  font-size: 22px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.black { background: #222; }
+
+.correct { background: #a8e6a3; }
+.wrong { background: #f5a3a3; }
+
+button {
+  font-size: 18px;
+  padding: 10px 20px;
+  margin: 10px;
+}
+
+#timer {
+  font-size: 20px;
+  margin-top: 10px;
+}
+</style>
 </head>
 <body>
 
-<h1>Daily Crossword</h1>
+<h1>Ellii – Grille du jour</h1>
+<div id="timer">Temps : 0s</div>
 <div id="grid"></div>
 
-<h2>Definitions</h2>
+<h2>Définitions</h2>
 <div id="clues"></div>
 
-<button onclick="checkAnswers()">Check</button>
+<button onclick="checkAnswers()">Vérifier</button>
 
 <script>
+let startTime = Date.now();
+
+setInterval(() => {
+  const seconds = Math.floor((Date.now() - startTime) / 1000);
+  document.getElementById("timer").innerText = "Temps : " + seconds + "s";
+}, 1000);
+
 async function loadGrid() {
-  const response = await fetch('data.json');
+  const response = await fetch('data.json?' + new Date().getTime());
   const data = await response.json();
 
   const gridContainer = document.getElementById("grid");
   gridContainer.innerHTML = "";
   gridContainer.className = "grid";
-  gridContainer.style.gridTemplateColumns = `repeat(${data.grid[0].length}, 40px)`;
+  gridContainer.style.gridTemplateColumns = `repeat(${data.grid[0].length}, 45px)`;
 
   data.grid.forEach((row, r) => {
     row.forEach((cell, c) => {
@@ -65,15 +100,26 @@ async function loadGrid() {
 }
 
 function checkAnswers() {
+  let correctCount = 0;
+  let total = 0;
+
   document.querySelectorAll("input").forEach(input => {
     const r = input.dataset.row;
     const c = input.dataset.col;
+    total++;
     if (input.value.toUpperCase() === window.solution[r][c]) {
-      input.style.background = "lightgreen";
+      input.classList.add("correct");
+      input.classList.remove("wrong");
+      correctCount++;
     } else {
-      input.style.background = "salmon";
+      input.classList.add("wrong");
+      input.classList.remove("correct");
     }
   });
+
+  if (correctCount === total) {
+    alert("Bravo ! Grille complétée 🎉");
+  }
 }
 
 loadGrid();
