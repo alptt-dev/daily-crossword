@@ -20,11 +20,12 @@ jobs:
 
       - run: pip install requests
 
-      - run: python generate.py
+      - name: Run generator
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        run: python generate.py
 
-      - run: |
+      - name: Commit changes
+        run: |
           git config user.name "bot"
-          git config user.email "bot@github.com"
-          git add data.json
-          git commit -m "Daily crossword update" || echo "No changes"
-          git push
+          git config user.ema
