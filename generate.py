@@ -1,82 +1,84 @@
-import requests
-import json
 import os
-from datetime import date
+import json
 import random
+import requests
+from datetime import date
 
-API_KEY = os.environ["MISTRAL_API_KEY"]
+API_KEY = os.environ.get("MISTRAL_API_KEY")
+
+if not API_KEY:
+    print("❌ ERROR: MISTRAL_API_KEY not set!")
+    exit(1)
 
 def generate_words():
     prompt = """
-Génère 8 mots français adaptés à des seniors (culture générale).
-Retourne un JSON strict :
-[
-  {"word": "...", "clue": "..."},
-  ...
-]
-Les mots doivent faire entre 4 et 8 lettres.
-"""
+    Génère un JSON strict avec 5 mots + définitions en français :
+    [
+      {"word":"CHAT", "clue":"Animal domestique"},
+      ...
+    ]
+    Mots de 4 à 8 lettres maximum.
+    """
 
-    response = requests.post(
-        "https://api.mistral.ai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        },
-        json={
-            "model": "mistral-small",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
-        }
-    )
+    try:
+        resp = requests.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "mistral-small-latest",
+                "messages": [
+                    {"role":"user","content":prompt}
+                ],
+                "temperature": 0.7
+            },
+            timeout=30
+        )
 
-    content = response.json()["choices"][0]["message"]["content"]
-    return json.loads(content)
+        print("HTTP status:", resp.status_code)
+        print("Response text:", resp.text)
 
-def create_cross_grid(words):
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+        words = json.loads(content)
+        return words
+
+    except Exception as e:
+        print("❌ API ERROR:", e)
+        print("Using fallback words.")
+        return [
+            {"word":"CHAT","clue":"Animal domestique"},
+            {"word":"MAISON","clue":"Lieu d'habitation"},
+            {"word":"MER","clue":"Grande étendue d'eau salée"},
+            {"word":"LIVRE","clue":"Objet qu’on lit"},
+            {"word":"ARBRE","clue":"Plante avec un tronc"}
+        ]
+
+def build_grid(words):
     size = 10
     grid = [["#" for _ in range(size)] for _ in range(size)]
 
+    main = words[0]["word"].upper()
     center = size // 2
-    main_word = words[0]["word"].upper()
+    start = center - len(main) // 2
 
-    # Place main horizontal word
-    start_col = center - len(main_word)//2
-    for i, letter in enumerate(main_word):
-        grid[center][start_col + i] = letter
+    for i, letter in enumerate(main):
+        grid[center][start+i] = letter
 
-    placed = [words[0]]
-
-    # Place vertical words crossing main word
-    for w in words[1:]:
-        word = w["word"].upper()
-        for i, letter in enumerate(word):
-            for j, main_letter in enumerate(main_word):
-                if letter == main_letter:
-                    row = center - i
-                    col = start_col + j
-                    if 0 <= row and row + len(word) <= size:
-                        for k, l in enumerate(word):
-                            grid[row + k][col] = l
-                        placed.append(w)
-                        break
-            if w in placed:
-                break
-
-    clues = []
-    for idx, w in enumerate(placed):
-        clues.append(f"{idx+1}. {w['clue']}")
-
+    clues = [f"1. {words[0]['clue']}"]
     return grid, clues
 
 words = generate_words()
-grid, clues = create_cross_grid(words)
+grid, clues = build_grid(words)
 
-data = {
+out = {
     "date": str(date.today()),
     "grid": grid,
     "clues": clues
 }
 
-with open("data.json", "w") as f:
-    json.dump(data, f)
+with open("data.json","w") as f:
+    json.dump(out,f)
+print("✅ data.json written")
