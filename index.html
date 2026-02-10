@@ -2,15 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ellii Daily Crossword</title>
+<title>Daily Crossword</title>
 <style>
 body {
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   text-align: center;
-  background: #f4f6f9;
+  background: #f5f5f5;
 }
-
-h1 { font-size: 32px; }
 
 .grid {
   display: inline-grid;
@@ -27,102 +25,73 @@ h1 { font-size: 32px; }
 }
 
 .black { background: #222; }
-
-.correct { background: #a8e6a3; }
-.wrong { background: #f5a3a3; }
+.correct { background: #b6f2b6; }
+.wrong { background: #f8b6b6; }
 
 button {
-  font-size: 18px;
   padding: 10px 20px;
-  margin: 10px;
-}
-
-#timer {
-  font-size: 20px;
-  margin-top: 10px;
+  font-size: 18px;
 }
 </style>
 </head>
 <body>
 
-<h1>Ellii – Grille du jour</h1>
-<div id="timer">Temps : 0s</div>
+<h1>Grille du jour</h1>
 <div id="grid"></div>
 
 <h2>Définitions</h2>
 <div id="clues"></div>
 
-<button onclick="checkAnswers()">Vérifier</button>
+<button onclick="check()">Vérifier</button>
 
 <script>
-let startTime = Date.now();
+async function load() {
+  const r = await fetch("data.json?"+Date.now());
+  const data = await r.json();
 
-setInterval(() => {
-  const seconds = Math.floor((Date.now() - startTime) / 1000);
-  document.getElementById("timer").innerText = "Temps : " + seconds + "s";
-}, 1000);
+  const g = document.getElementById("grid");
+  g.innerHTML="";
+  g.className="grid";
+  g.style.gridTemplateColumns=`repeat(${data.grid[0].length},45px)`;
 
-async function loadGrid() {
-  const response = await fetch('data.json?' + new Date().getTime());
-  const data = await response.json();
-
-  const gridContainer = document.getElementById("grid");
-  gridContainer.innerHTML = "";
-  gridContainer.className = "grid";
-  gridContainer.style.gridTemplateColumns = `repeat(${data.grid[0].length}, 45px)`;
-
-  data.grid.forEach((row, r) => {
-    row.forEach((cell, c) => {
-      if (cell === "#") {
-        const div = document.createElement("div");
-        div.className = "cell black";
-        gridContainer.appendChild(div);
+  data.grid.forEach((row,r)=>{
+    row.forEach((cell,c)=>{
+      if(cell==="#"){
+        const d=document.createElement("div");
+        d.className="cell black";
+        g.appendChild(d);
       } else {
-        const input = document.createElement("input");
-        input.maxLength = 1;
-        input.className = "cell";
-        input.dataset.row = r;
-        input.dataset.col = c;
-        gridContainer.appendChild(input);
+        const i=document.createElement("input");
+        i.maxLength=1;
+        i.className="cell";
+        i.dataset.r=r;
+        i.dataset.c=c;
+        g.appendChild(i);
       }
     });
   });
 
-  const cluesDiv = document.getElementById("clues");
-  cluesDiv.innerHTML = "";
-  data.clues.forEach(clue => {
-    const p = document.createElement("p");
-    p.innerText = clue;
-    cluesDiv.appendChild(p);
-  });
+  document.getElementById("clues").innerHTML =
+    data.clues.map(c=>"<p>"+c+"</p>").join("");
 
-  window.solution = data.grid;
+  window.solution=data.grid;
 }
 
-function checkAnswers() {
-  let correctCount = 0;
-  let total = 0;
-
-  document.querySelectorAll("input").forEach(input => {
-    const r = input.dataset.row;
-    const c = input.dataset.col;
-    total++;
-    if (input.value.toUpperCase() === window.solution[r][c]) {
-      input.classList.add("correct");
-      input.classList.remove("wrong");
-      correctCount++;
+function check(){
+  document.querySelectorAll("input").forEach(i=>{
+    const r=i.dataset.r;
+    const c=i.dataset.c;
+    if(i.value.toUpperCase()===window.solution[r][c]){
+      i.classList.add("correct");
+      i.classList.remove("wrong");
     } else {
-      input.classList.add("wrong");
-      input.classList.remove("correct");
+      i.classList.add("wrong");
+      i.classList.remove("correct");
     }
   });
-
-  if (correctCount === total) {
-    alert("Bravo ! Grille complétée 🎉");
-  }
 }
 
-loadGrid();
+load();
 </script>
 
 </body>
